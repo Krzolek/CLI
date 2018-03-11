@@ -93,7 +93,7 @@ void Cli_PutChar(char cByte)
    }
 }
 
-void Cli_PutString(uint16_t u16Count, const char * const pcByte)
+void Cli_PutString(uint16_t u16Count, const char * pcByte)
 {
    for (; u16Count > 0u; u16Count--)
    {

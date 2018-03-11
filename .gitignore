@@ -7,3 +7,6 @@
 *.o
 *.so
 CliTest
+*.cproject
+*.project
+.settings/*

@@ -56,6 +56,6 @@ void Cli_PutChar(char cByte);
  *
  *  Detailed description starts here.
  */
-void Cli_PutString(uint16_t u16Count, const char * const pcByte);
+void Cli_PutString(uint16_t u16Count, const char * pcByte);
 
 #endif /* _CLIMOD_H */
