@@ -28,8 +28,25 @@
 #define false (0u)                  /*!< Define false for internal bool */
 #endif
 
-/*============================ GLOBAL VARIABLES =============================*/
+//#define DEBUG_MODE                  /*!< Uncomment for additional debug prints */
 
+/*================================ TYPEDEFS =================================*/
+/*! \brief Pointer to command function */
+typedef void (*CliFunCmdPointer)(uint16_t,char **);
+/*! \brief Structure with command relevant data */
+typedef struct CliCommand_tag
+{
+   const char * const pcName; /*!< Name of the command */
+   const CliFunCmdPointer CmdFun;
+} CliCommand_t;
+/*! \brief Structure with command relevant data */
+typedef struct CliCommandList_tag
+{
+   CliCommand_t** ppsCliCmds;
+   uint16_t u16NoCmds;
+} CliCommandList_t;
+
+/*============================ GLOBAL VARIABLES =============================*/
 
 /*===================== GLOBAL FUNCTION DECLARATIONS ========================*/
 /*! \brief Put print function used in your project inside this function.
@@ -57,5 +74,7 @@ void Cli_PutChar(char cByte);
  *  Detailed description starts here.
  */
 void Cli_PutString(uint16_t u16Count, const char * pcByte);
+
+bool IsStringEqual(const char * pcString1, const char * pcString2);
 
 #endif /* _CLIMOD_H */

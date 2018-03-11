@@ -15,8 +15,7 @@
 /*================================ DEFINES ==================================*/
 
 /*================================ TYPEDEFS =================================*/
-/*! \brief Structure with buffers and indexes for internal computing
- */
+/*! \brief Structure with buffers and indexes for internal computing */
 typedef struct CliInternalBuffer_tag
 {
    char pcBuf[CLI_BUFFER_SIZE]; /*!< Accumulating received characters */
@@ -65,8 +64,36 @@ static bool IsWhiteChar(char pcCharacter);
  */
 static bool IsNewLineChar(char pcCharacter);
 
+/*! \brief Try to find command with name matching first token
+ *
+ *  \param  psCliBuf - structure with internal CLI buffers
+ *  \return bool - true if command was found, false otherwise
+ *
+ *  Detailed description starts here.
+ */
+static bool FindAndExecuteCommand(CliInternalBuffer_t * psCliBuf);
+
+static void ErrorCommandHandler(void);
+
+/*! \brief Help command function
+ *
+ *  \param  argc - count of passed parameters
+ *  \param  argv - array with passed parameters
+ *  \return void
+ *
+ */
+static void CliHelpCmd(uint16_t argc, char* argv[]);
+static void CliVersionCmd(uint16_t argc, char* argv[]);
 /*============================= LOCAL VARIABLES =============================*/
 static CliInternalBuffer_t CliBuf = { .u16Index = 0u, .u16TokenCount = 0u };
+static CliCommand_t sCliHelpCmd = { .pcName = "Help", .CmdFun = &CliHelpCmd };
+static CliCommand_t sCliVersionCmd = { .pcName = "Version", .CmdFun =
+      &CliVersionCmd };
+
+CliCommand_t * CliCommandTable[] = { &sCliHelpCmd, &sCliVersionCmd };
+
+static CliCommandList_t sCliCmdList = { .ppsCliCmds = CliCommandTable,
+      .u16NoCmds = sizeof(CliCommandTable) / sizeof(CliCommandTable[0]) };
 
 /*====================== LOCAL FUNCTION DEFINITIONS =========================*/
 void Cli_PutChar(char cByte)
@@ -102,19 +129,75 @@ void Cli_PutString(uint16_t u16Count, const char * pcByte)
    }
 }
 
+bool IsStringEqual(const char * pcString1, const char * pcString2)
+{
+   bool bRetVal = true;
+
+   if ((*pcString1) && (*pcString2)) /* Not 0 length */
+   {
+      while ((*pcString1) && (*pcString2)) /* Until end of (shorter) string */
+      {
+         if ((*pcString1) != (*pcString2))
+         {
+            bRetVal = false;
+         }
+         pcString1++;
+         pcString2++;
+      }
+   }
+
+   return bRetVal;
+}
+
 static void ExecuteCommand(CliInternalBuffer_t * psCliBuf)
 {
    uint16_t u16Index = 0u;
+   bool bTokensFound;
 
-   GetTokensFromString(psCliBuf);
-
+   bTokensFound = GetTokensFromString(psCliBuf);
+#ifdef DEBUG_MODE
    for (; u16Index < psCliBuf->u16TokenCount; ++u16Index)
    {
       printf("Token %d:\n\t", u16Index);
       Cli_PrintInterface((char *)psCliBuf->pu16TokenAddress[u16Index]);
       Cli_PrintInterface("\n");
    }
+#endif
+   if (true == bTokensFound)
+   {
+      FindAndExecuteCommand(psCliBuf);
+   }
+   else
+   {
+      ErrorCommandHandler();
+   }
 
+   Cli_PrintInterface("> ");
+
+}
+
+static bool FindAndExecuteCommand(CliInternalBuffer_t * psCliBuf)
+{
+   bool bRetVal = false;
+
+   for (uint16_t u16I = 0u;
+         (u16I < sCliCmdList.u16NoCmds) && (false == bRetVal); ++u16I)
+   {
+      if (true
+            == IsStringEqual(sCliCmdList.ppsCliCmds[u16I]->pcName,
+                  psCliBuf->pu16TokenAddress[0]))
+      {
+         sCliCmdList.ppsCliCmds[u16I]->CmdFun(psCliBuf->u16TokenCount,
+               psCliBuf->pu16TokenAddress);
+         bRetVal = true;
+      }
+   }
+   if (false == bRetVal)
+   {
+      ErrorCommandHandler();
+   }
+
+   return bRetVal;
 }
 
 static bool GetTokensFromString(CliInternalBuffer_t * psCliBuf)
@@ -122,6 +205,12 @@ static bool GetTokensFromString(CliInternalBuffer_t * psCliBuf)
    char * pu16SourcePointer = psCliBuf->pcBuf;
    bool bRetVal = true;
    psCliBuf->u16TokenCount = 0u;
+
+   /* Go through all white chars before first token */
+   while (IsWhiteChar(*pu16SourcePointer))
+   {
+      pu16SourcePointer++;
+   }
 
    /* Get all tokens separated by white characters */
    while (!IsNewLineChar(*pu16SourcePointer)) /* Go through message */
@@ -182,3 +271,25 @@ static bool IsNewLineChar(char pcCharacter)
    return bRetVal;
 }
 
+static void CliHelpCmd(uint16_t argc, char* argv[])
+{
+   Cli_PrintInterface("This is Help!\n");
+
+   for (uint16_t u16I = 0; u16I < sCliCmdList.u16NoCmds; ++u16I)
+   {
+      Cli_PrintInterface(sCliCmdList.ppsCliCmds[u16I]->pcName);
+      Cli_PrintInterface("\n");
+   }
+
+}
+
+static void CliVersionCmd(uint16_t argc, char* argv[])
+{
+   Cli_PrintInterface("This is 0.0 version!\n");
+}
+
+static void ErrorCommandHandler(void)
+{
+   Cli_PrintInterface(
+         "No valid command was found! Type Help for command list\n");
+}
